@@ -1,18 +1,20 @@
+// Full updated app.js
 class Note {
-  constructor(id, title, text) {
+  constructor(id, title, text, isArchived = false) {
     this.id = id;
     this.title = title;
     this.text = text;
+    this.isArchived = isArchived;
   }
 }
 
 class App {
   constructor() {
-    // localStorage.setItem('test', JSON.stringify(['123']));
-    // console.log(JSON.parse(localStorage.getItem('test')));
     this.notes = JSON.parse(localStorage.getItem("notes")) || [];
     this.selectedNoteId = "";
     this.miniSidebar = true;
+    this.sidebarPinned = false;
+    this.selectedSection = "notes";
 
     this.$activeForm = document.querySelector(".active-form");
     this.$inactiveForm = document.querySelector(".inactive-form");
@@ -52,93 +54,116 @@ class App {
       event.preventDefault();
     });
 
-    this.$sidebar.addEventListener("mouseover", (event) => {
-      this.handleToggleSidebar();
+    document.querySelector("#menu-toggle").addEventListener("click", () => {
+      this.toggleSidebar();
     });
 
-    this.$sidebar.addEventListener("mouseout", (event) => {
-      this.handleToggleSidebar();
+    this.$sidebar.addEventListener("mouseover", () => {
+      if (!this.sidebarPinned) this.expandSidebarTemporarily();
     });
-    // Enable search functionality
-const searchInput = document.querySelector(".search-area input");
-searchInput.addEventListener("input", (e) => {
-  const query = e.target.value.toLowerCase();
-  const filteredNotes = this.notes.filter(
-    (note) =>
-      note.title.toLowerCase().includes(query) ||
-      note.text.toLowerCase().includes(query)
-  );
-  this.displayNotes(filteredNotes);
-});
 
-// Handle all icon button clicks
-document.body.addEventListener("click", (e) => {
-  const icon = e.target.closest(".material-symbols-outlined");
-  if (!icon) return;
+    this.$sidebar.addEventListener("mouseout", () => {
+      if (!this.sidebarPinned) this.collapseSidebarTemporarily();
+    });
 
-  const action = icon.innerText.trim();
-  switch (action) {
-    case "add_alert":
-      alert("Reminder feature is not implemented yet.");
-      break;
-    case "person_add":
-      alert("Collaborator feature is not implemented yet.");
-      break;
-    case "palette":
-      alert("Color picker feature is coming soon!");
-      break;
-    case "image":
-      alert("Image attachment feature is in progress.");
-      break;
-    case "more_vert":
-      alert("More options to be added later.");
-      break;
-    case "undo":
-      alert("Undo action not implemented yet.");
-      break;
-    case "redo":
-      alert("Redo action not implemented yet.");
-      break;
-    default:
-      break;
+    document.querySelector(".search-area input").addEventListener("input", (e) => {
+      const query = e.target.value.toLowerCase();
+      const filtered = this.notes.filter(note =>
+        note.title.toLowerCase().includes(query) ||
+        note.text.toLowerCase().includes(query)
+      );
+      this.displayNotes(filtered);
+    });
+
+    document.querySelectorAll(".sidebar-item").forEach(item => {
+      item.addEventListener("click", () => {
+        const text = item.querySelector(".sidebar-text").textContent.trim();
+        this.handleSidebarSelection(text);
+      });
+    });
+
+    document.body.addEventListener("click", (e) => {
+      const icon = e.target.closest(".material-symbols-outlined");
+      if (!icon) return;
+
+      const action = icon.innerText.trim();
+      switch (action) {
+        case "add_alert": alert("Reminder feature not ready."); break;
+        case "person_add": alert("Collaborator coming soon."); break;
+        case "palette": alert("Color change not implemented."); break;
+        case "image": alert("Image upload coming soon."); break;
+        case "more_vert": alert("More options coming."); break;
+        case "undo": alert("Undo not ready."); break;
+        case "redo": alert("Redo not ready."); break;
+      }
+    });
+
+    const settingsIcon = document.getElementById("settings-icon");
+    const settingsMenu = document.getElementById("settings-menu");
+    const darkSwitch = document.getElementById("darkmode-switch");
+
+    settingsIcon.addEventListener("click", (e) => {
+      e.stopPropagation();
+      settingsMenu.style.display =
+        settingsMenu.style.display === "block" ? "none" : "block";
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!settingsMenu.contains(e.target) && e.target !== settingsIcon) {
+        settingsMenu.style.display = "none";
+      }
+    });
+
+    darkSwitch.addEventListener("change", () => {
+      if (darkSwitch.checked) {
+        document.body.classList.add("dark-mode");
+        localStorage.setItem("theme", "dark");
+      } else {
+        document.body.classList.remove("dark-mode");
+        localStorage.setItem("theme", "light");
+      }
+    });
+
+    if (localStorage.getItem("theme") === "dark") {
+      document.body.classList.add("dark-mode");
+      darkSwitch.checked = true;
+    }
   }
-});
-// Toggle settings dropdown
-const settingsIcon = document.getElementById("settings-icon");
-const settingsMenu = document.getElementById("settings-menu");
 
-settingsIcon.addEventListener("click", (e) => {
-  e.stopPropagation();
-  settingsMenu.style.display =
-    settingsMenu.style.display === "block" ? "none" : "block";
-});
+  toggleSidebar() {
+    const main = document.querySelector("main");
+    this.sidebarPinned = !this.sidebarPinned;
 
-// Hide dropdown on outside click
-document.addEventListener("click", (e) => {
-  if (!settingsMenu.contains(e.target) && e.target !== settingsIcon) {
-    settingsMenu.style.display = "none";
+    if (this.sidebarPinned) {
+      this.$sidebar.style.width = "250px";
+      this.$sidebar.classList.add("sidebar-hover");
+      this.$sidebarActiveItem.classList.add("sidebar-active-item");
+      main.classList.add("sidebar-expanded");
+    } else {
+      this.$sidebar.style.width = "80px";
+      this.$sidebar.classList.remove("sidebar-hover");
+      this.$sidebarActiveItem.classList.remove("sidebar-active-item");
+      main.classList.remove("sidebar-expanded");
+    }
   }
-});
 
-// Handle dark mode toggle
-const darkSwitch = document.getElementById("darkmode-switch");
-
-darkSwitch.addEventListener("change", () => {
-  if (darkSwitch.checked) {
-    document.body.classList.add("dark-mode");
-    localStorage.setItem("theme", "dark");
-  } else {
-    document.body.classList.remove("dark-mode");
-    localStorage.setItem("theme", "light");
+  expandSidebarTemporarily() {
+    const main = document.querySelector("main");
+    this.$sidebar.style.width = "250px";
+    this.$sidebar.classList.add("sidebar-hover");
+    main.classList.add("sidebar-expanded");
   }
-});
 
-// Load theme on page load
-if (localStorage.getItem("theme") === "dark") {
-  document.body.classList.add("dark-mode");
-  if (darkSwitch) darkSwitch.checked = true;
-}
+  collapseSidebarTemporarily() {
+    const main = document.querySelector("main");
+    this.$sidebar.style.width = "80px";
+    this.$sidebar.classList.remove("sidebar-hover");
+    main.classList.remove("sidebar-expanded");
+  }
 
+  handleSidebarSelection(section) {
+    this.selectedSection = section.toLowerCase();
+    this.render();
   }
 
   handleFormClick(event) {
@@ -175,20 +200,13 @@ if (localStorage.getItem("theme") === "dark") {
       this.$modalTitle.value = $selectedNote.children[1].innerHTML;
       this.$modalText.value = $selectedNote.children[2].innerHTML;
       this.$modal.classList.add("open-modal");
-    } else {
-      return;
     }
   }
 
   closeModal(event) {
     const isModalFormClickedOn = this.$modalForm.contains(event.target);
-    const isCloseModalBtnClickedOn = this.$closeModalForm.contains(
-      event.target
-    );
-    if (
-      (!isModalFormClickedOn || isCloseModalBtnClickedOn) &&
-      this.$modal.classList.contains("open-modal")
-    ) {
+    const isCloseModalBtnClickedOn = this.$closeModalForm.contains(event.target);
+    if ((!isModalFormClickedOn || isCloseModalBtnClickedOn) && this.$modal.classList.contains("open-modal")) {
       this.editNote(this.selectedNoteId, {
         title: this.$modalTitle.value,
         text: this.$modalText.value,
@@ -200,15 +218,17 @@ if (localStorage.getItem("theme") === "dark") {
   handleArchiving(event) {
     const $selectedNote = event.target.closest(".note");
     if ($selectedNote && event.target.closest(".archive")) {
-      this.selectedNoteId = $selectedNote.id;
-      this.deleteNote(this.selectedNoteId);
-    } else {
-      return;
+      const id = $selectedNote.id;
+      this.notes = this.notes.map(note => {
+        if (note.id === id) note.isArchived = !note.isArchived;
+        return note;
+      });
+      this.render();
     }
   }
 
   addNote({ title, text }) {
-    if (text != "") {
+    if (text.trim() !== "") {
       const newNote = new Note(cuid(), title, text);
       this.notes = [...this.notes, newNote];
       this.render();
@@ -226,95 +246,41 @@ if (localStorage.getItem("theme") === "dark") {
     this.render();
   }
 
-  handleMouseOverNote(element) {
-    const $note = document.querySelector("#" + element.id);
-    const $checkNote = $note.querySelector(".check-circle");
-    const $noteFooter = $note.querySelector(".note-footer");
-    $checkNote.style.visibility = "visible";
-    $noteFooter.style.visibility = "visible";
-  }
-
-  handleMouseOutNote(element) {
-    const $note = document.querySelector("#" + element.id);
-    const $checkNote = $note.querySelector(".check-circle");
-    const $noteFooter = $note.querySelector(".note-footer");
-    $checkNote.style.visibility = "hidden";
-    $noteFooter.style.visibility = "hidden";
-  }
-
-  handleToggleSidebar() {
-  const main = document.querySelector("main");
-
-  if (this.miniSidebar) {
-    this.$sidebar.style.width = "250px";
-    this.$sidebar.classList.add("sidebar-hover");
-    this.$sidebarActiveItem.classList.add("sidebar-active-item");
-    main.classList.add("sidebar-expanded");
-    this.miniSidebar = false;
-  } else {
-    this.$sidebar.style.width = "80px";
-    this.$sidebar.classList.remove("sidebar-hover");
-    this.$sidebarActiveItem.classList.remove("sidebar-active-item");
-    main.classList.remove("sidebar-expanded");
-    this.miniSidebar = true;
-  }
-}
-
-  saveNotes() {
-    localStorage.setItem('notes', JSON.stringify(this.notes));
-  }
-
   render() {
     this.saveNotes();
     this.displayNotes();
   }
 
-//  onmouseover="app.handleMouseOverNote(this)" onmouseout="app.handleMouseOutNote(this)"
+  saveNotes() {
+    localStorage.setItem("notes", JSON.stringify(this.notes));
+  }
 
-displayNotes(filtered = this.notes) {
-  this.$notes.innerHTML = filtered
-    .map(
-      (note) =>
-        `
-      <div class="note" id="${note.id}">
-        <span class="material-symbols-outlined check-circle">check_circle</span>
-        <div class="title">${note.title}</div>
-        <div class="text">${note.text}</div>
-        <div class="note-footer">
-          <div class="tooltip">
-            <span class="material-symbols-outlined hover small-icon">add_alert</span>
-            <span class="tooltip-text">Remind me</span>
-          </div>
-          <div class="tooltip">
-            <span class="material-symbols-outlined hover small-icon">person_add</span>
-            <span class="tooltip-text">Collaborator</span>
-          </div>
-          <div class="tooltip">
-            <span class="material-symbols-outlined hover small-icon">palette</span>
-            <span class="tooltip-text">Change Color</span>
-          </div>
-          <div class="tooltip">
-            <span class="material-symbols-outlined hover small-icon">image</span>
-            <span class="tooltip-text">Add Image</span>
-          </div>
-          <div class="tooltip archive">
-            <span class="material-symbols-outlined hover small-icon">archive</span>
-            <span class="tooltip-text">Archive</span>
-          </div>
-          <div class="tooltip">
-            <span class="material-symbols-outlined hover small-icon">more_vert</span>
-            <span class="tooltip-text">More</span>
-          </div>
-        </div>
-      </div>
-      `
-    )
-    .join("");
-}
+  displayNotes(filteredNotes = null) {
+    let notesToRender = filteredNotes || this.notes;
+    if (this.selectedSection === "notes") {
+      notesToRender = notesToRender.filter((n) => !n.isArchived);
+    } else if (this.selectedSection === "archive") {
+      notesToRender = notesToRender.filter((n) => n.isArchived);
+    }
 
-  deleteNote(id) {
-    this.notes = this.notes.filter((note) => note.id != id);
-    this.render();
+    this.$notes.innerHTML = notesToRender
+      .map(
+        (note) => `
+        <div class="note" id="${note.id}">
+          <span class="material-symbols-outlined check-circle">check_circle</span>
+          <div class="title">${note.title}</div>
+          <div class="text">${note.text}</div>
+          <div class="note-footer">
+            <div class="tooltip"><span class="material-symbols-outlined hover small-icon">add_alert</span><span class="tooltip-text">Remind me</span></div>
+            <div class="tooltip"><span class="material-symbols-outlined hover small-icon">person_add</span><span class="tooltip-text">Collaborator</span></div>
+            <div class="tooltip"><span class="material-symbols-outlined hover small-icon">palette</span><span class="tooltip-text">Change Color</span></div>
+            <div class="tooltip"><span class="material-symbols-outlined hover small-icon">image</span><span class="tooltip-text">Add Image</span></div>
+            <div class="tooltip archive"><span class="material-symbols-outlined hover small-icon">archive</span><span class="tooltip-text">Archive</span></div>
+            <div class="tooltip"><span class="material-symbols-outlined hover small-icon">more_vert</span><span class="tooltip-text">More</span></div>
+          </div>
+        </div>`
+      )
+      .join("");
   }
 }
 
